@@ -9,10 +9,62 @@
  * ---------------------------------------------------------------
  */
 
+export interface CheckersMsgCreateGameResponse {
+  idValue?: string;
+}
+
+export interface CheckersMsgPlayMoveResponse {
+  idValue?: string;
+
+  /** @format int64 */
+  capturedX?: string;
+
+  /** @format int64 */
+  capturedY?: string;
+  winner?: string;
+}
+
+export type CheckersMsgRejectGameResponse = object;
+
+export interface CheckersNextGame {
+  /** @format uint64 */
+  idValue?: string;
+  fifoHead?: string;
+  fifoTail?: string;
+}
+
 /**
  * Params defines the parameters for the module.
  */
 export type CheckersParams = object;
+
+export interface CheckersQueryAllStoredGameResponse {
+  storedGame?: CheckersStoredGame[];
+
+  /**
+   * PageResponse is to be embedded in gRPC response messages where the
+   * corresponding request message has used PageRequest.
+   *
+   *  message SomeResponse {
+   *          repeated Bar results = 1;
+   *          PageResponse page = 2;
+   *  }
+   */
+  pagination?: V1Beta1PageResponse;
+}
+
+export interface CheckersQueryCanPlayMoveResponse {
+  possible?: boolean;
+  reason?: string;
+}
+
+export interface CheckersQueryGetNextGameResponse {
+  NextGame?: CheckersNextGame;
+}
+
+export interface CheckersQueryGetStoredGameResponse {
+  storedGame?: CheckersStoredGame;
+}
 
 /**
  * QueryParamsResponse is response type for the Query/Params RPC method.
@@ -20,6 +72,24 @@ export type CheckersParams = object;
 export interface CheckersQueryParamsResponse {
   /** params holds all the parameters of this module. */
   params?: CheckersParams;
+}
+
+export interface CheckersStoredGame {
+  index?: string;
+  game?: string;
+  turn?: string;
+  red?: string;
+  black?: string;
+
+  /** @format uint64 */
+  moveCount?: string;
+  beforeId?: string;
+  afterId?: string;
+  deadline?: string;
+  winner?: string;
+
+  /** @format uint64 */
+  wager?: string;
 }
 
 export interface ProtobufAny {
@@ -31,6 +101,69 @@ export interface RpcStatus {
   code?: number;
   message?: string;
   details?: ProtobufAny[];
+}
+
+/**
+* message SomeRequest {
+         Foo some_parameter = 1;
+         PageRequest pagination = 2;
+ }
+*/
+export interface V1Beta1PageRequest {
+  /**
+   * key is a value returned in PageResponse.next_key to begin
+   * querying the next page most efficiently. Only one of offset or key
+   * should be set.
+   * @format byte
+   */
+  key?: string;
+
+  /**
+   * offset is a numeric offset that can be used when key is unavailable.
+   * It is less efficient than using key. Only one of offset or key should
+   * be set.
+   * @format uint64
+   */
+  offset?: string;
+
+  /**
+   * limit is the total number of results to be returned in the result page.
+   * If left empty it will default to a value to be set by each app.
+   * @format uint64
+   */
+  limit?: string;
+
+  /**
+   * count_total is set to true  to indicate that the result set should include
+   * a count of the total number of items available for pagination in UIs.
+   * count_total is only respected when offset is used. It is ignored when key
+   * is set.
+   */
+  count_total?: boolean;
+
+  /**
+   * reverse is set to true if results are to be returned in the descending order.
+   *
+   * Since: cosmos-sdk 0.43
+   */
+  reverse?: boolean;
+}
+
+/**
+* PageResponse is to be embedded in gRPC response messages where the
+corresponding request message has used PageRequest.
+
+ message SomeResponse {
+         repeated Bar results = 1;
+         PageResponse page = 2;
+ }
+*/
+export interface V1Beta1PageResponse {
+  /** @format byte */
+  next_key?: string;
+
+  /** @format uint64 */
+  total?: string;
 }
 
 export type QueryParamsType = Record<string | number, any>;
@@ -233,6 +366,46 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
    * No description
    *
    * @tags Query
+   * @name QueryCanPlayMove
+   * @summary Queries a list of CanPlayMove items.
+   * @request GET:/gupnik/checkers/checkers/can_play_move/{idValue}/{player}/{fromX}/{fromY}/{toX}/{toY}
+   */
+  queryCanPlayMove = (
+    idValue: string,
+    player: string,
+    fromX: string,
+    fromY: string,
+    toX: string,
+    toY: string,
+    params: RequestParams = {},
+  ) =>
+    this.request<CheckersQueryCanPlayMoveResponse, RpcStatus>({
+      path: `/gupnik/checkers/checkers/can_play_move/${idValue}/${player}/${fromX}/${fromY}/${toX}/${toY}`,
+      method: "GET",
+      format: "json",
+      ...params,
+    });
+
+  /**
+   * No description
+   *
+   * @tags Query
+   * @name QueryNextGame
+   * @summary Queries a NextGame by index.
+   * @request GET:/gupnik/checkers/checkers/next_game
+   */
+  queryNextGame = (params: RequestParams = {}) =>
+    this.request<CheckersQueryGetNextGameResponse, RpcStatus>({
+      path: `/gupnik/checkers/checkers/next_game`,
+      method: "GET",
+      format: "json",
+      ...params,
+    });
+
+  /**
+   * No description
+   *
+   * @tags Query
    * @name QueryParams
    * @summary Parameters queries the parameters of the module.
    * @request GET:/gupnik/checkers/checkers/params
@@ -240,6 +413,48 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
   queryParams = (params: RequestParams = {}) =>
     this.request<CheckersQueryParamsResponse, RpcStatus>({
       path: `/gupnik/checkers/checkers/params`,
+      method: "GET",
+      format: "json",
+      ...params,
+    });
+
+  /**
+   * No description
+   *
+   * @tags Query
+   * @name QueryStoredGameAll
+   * @summary Queries a list of StoredGame items.
+   * @request GET:/gupnik/checkers/checkers/stored_game
+   */
+  queryStoredGameAll = (
+    query?: {
+      "pagination.key"?: string;
+      "pagination.offset"?: string;
+      "pagination.limit"?: string;
+      "pagination.count_total"?: boolean;
+      "pagination.reverse"?: boolean;
+    },
+    params: RequestParams = {},
+  ) =>
+    this.request<CheckersQueryAllStoredGameResponse, RpcStatus>({
+      path: `/gupnik/checkers/checkers/stored_game`,
+      method: "GET",
+      query: query,
+      format: "json",
+      ...params,
+    });
+
+  /**
+   * No description
+   *
+   * @tags Query
+   * @name QueryStoredGame
+   * @summary Queries a StoredGame by index.
+   * @request GET:/gupnik/checkers/checkers/stored_game/{index}
+   */
+  queryStoredGame = (index: string, params: RequestParams = {}) =>
+    this.request<CheckersQueryGetStoredGameResponse, RpcStatus>({
+      path: `/gupnik/checkers/checkers/stored_game/${index}`,
       method: "GET",
       format: "json",
       ...params,
